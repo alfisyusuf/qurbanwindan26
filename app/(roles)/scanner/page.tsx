@@ -98,8 +98,14 @@ export default function ScannerPage() {
     setScannedData(null);
     setErrorMsg(null);
     setIsScanning(true);
-    if (scannerRef.current && scannerRef.current.getState() === 2) {
-      scannerRef.current.resume();
+    
+    // Gunakan try-catch agar tidak error jika state tidak sesuai
+    try {
+      if (scannerRef.current) {
+        scannerRef.current.resume();
+      }
+    } catch (err) {
+      console.log("Meresume kamera...", err);
     }
   };
 
