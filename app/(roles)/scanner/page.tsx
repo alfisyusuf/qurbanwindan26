@@ -148,7 +148,7 @@ export default function ScannerPage() {
 
       {/* Modal Sukses (Glassmorphism) */}
       {scannedData && !errorMsg && (
-        <div className="absolute inset-0 z-50 flex flex-col justify-end p-4 bg-black/40 backdrop-blur-lg">
+        <div className="absolute inset-0 z-50 flex flex-col justify-end p-4 pb-16 bg-black/40 backdrop-blur-lg">
           <div className="bg-white/90 backdrop-blur-2xl p-6 rounded-3xl shadow-2xl border border-white/50">
             <div className="text-center mb-6">
               <CheckCircle2 size={56} className="mx-auto text-green-500 mb-2" />
