@@ -17,51 +17,58 @@ export default function RekapPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
+      try {
+        // Ambil data hewan
+        const { data: hewanData } = await supabase.from("hewan").select("*");
+        
+        let dSapi = 0;
+        let dKambing = 0;
 
-      // Ambil data hewan
-      const { data: hewanData } = await supabase.from("hewan").select("*");
-      
-      let dSapi = 0;
-      let dKambing = 0;
+        if (hewanData) {
+          hewanData.forEach((h) => {
+            if (h.jenis_hewan === "Sapi") dSapi += h.berat_daging_kg || 0;
+            if (h.jenis_hewan === "Kambing") dKambing += h.berat_daging_kg || 0;
+          });
+        }
 
-      if (hewanData) {
-        hewanData.forEach((h) => {
-          if (h.jenis_hewan === "Sapi") dSapi += h.berat_daging_kg;
-          if (h.jenis_hewan === "Kambing") dKambing += h.berat_daging_kg;
+        // Ambil data distribusi (Kupon & Kurir)
+        const { data: kuponData } = await supabase.from("kupon").select("*");
+        
+        let kTotal = 0;
+        let kDiambil = 0;
+        let kurTotal = 0;
+        let kurSelesai = 0;
+
+        if (kuponData) {
+          kuponData.forEach((k) => {
+            // Mencegah error jika kategori kosong/null di database
+            const namaKategori = k.kategori || ""; 
+
+            if (namaKategori.toLowerCase().includes("pengqurban")) {
+              kurTotal++;
+              if (k.kurir_time) kurSelesai++;
+            } else {
+              kTotal++;
+              if (k.status_claim) kDiambil++;
+            }
+          });
+        }
+
+        setStats({
+          dagingSapi: dSapi,
+          dagingKambing: dKambing,
+          kuponTotal: kTotal,
+          kuponDiambil: kDiambil,
+          kurirTotal: kurTotal,
+          kurirSelesai: kurSelesai,
         });
+
+      } catch (error) {
+        console.error("Gagal mengambil data:", error);
+      } finally {
+        // Apapun yang terjadi (sukses/error), matikan loading
+        setLoading(false); 
       }
-
-      // Ambil data distribusi (Kupon & Kurir)
-      const { data: kuponData } = await supabase.from("kupon").select("*");
-      
-      let kTotal = 0;
-      let kDiambil = 0;
-      let kurTotal = 0;
-      let kurSelesai = 0;
-
-      if (kuponData) {
-        kuponData.forEach((k) => {
-          if (k.kategori.toLowerCase().includes("pengqurban")) {
-            kurTotal++;
-            if (k.kurir_time) kurSelesai++;
-          } else {
-            kTotal++;
-            if (k.status_claim) kDiambil++;
-          }
-        });
-      }
-
-      setStats({
-        dagingSapi: dSapi,
-        dagingKambing: dKambing,
-        kuponTotal: kTotal,
-        kuponDiambil: kDiambil,
-        kurirTotal: kurTotal,
-        kurirSelesai: kurSelesai,
-      });
-
-      setLoading(false);
     };
 
     fetchData();
@@ -124,7 +131,6 @@ export default function RekapPage() {
             <span className="font-black text-2xl text-blue-600">{persenKupon}%</span>
           </div>
 
-          {/* Progress Bar */}
           <div className="w-full bg-gray-200 rounded-full h-3 mb-4 overflow-hidden">
             <div className="bg-blue-500 h-3 rounded-full transition-all duration-1000" style={{ width: `${persenKupon}%` }}></div>
           </div>
@@ -145,7 +151,6 @@ export default function RekapPage() {
             <span className="font-black text-2xl text-orange-600">{persenKurir}%</span>
           </div>
 
-          {/* Progress Bar */}
           <div className="w-full bg-gray-200 rounded-full h-3 mb-4 overflow-hidden">
             <div className="bg-orange-500 h-3 rounded-full transition-all duration-1000" style={{ width: `${persenKurir}%` }}></div>
           </div>
