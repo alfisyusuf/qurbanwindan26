@@ -3,7 +3,7 @@
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { QrCode, Truck, Scale, LogOut, Printer } from "lucide-react";
+import { QrCode, Truck, Scale, LogOut, Printer, UserPlus } from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
@@ -49,6 +49,13 @@ export default function Home() {
             <div className="text-left">
               <h2 className="font-bold text-xl">Cetak Kupon</h2>
               <p className="text-gray-300 text-sm">Print QR Code ke kertas A4</p>
+            </div>
+          </Link>
+          <Link href="/admin" className="flex items-center gap-4 bg-blue-800 text-white p-4 rounded-2xl shadow-lg hover:bg-blue-900 active:scale-95 transition-all">
+            <div className="bg-white/20 p-3 rounded-xl"><UserPlus size={28} /></div>
+            <div className="text-left">
+              <h2 className="font-bold text-xl">Admin Registrasi</h2>
+              <p className="text-blue-200 text-sm">Update nama kupon kosongan</p>
             </div>
           </Link>
         </div>
