@@ -10,11 +10,16 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
+    // Daftar halaman yang boleh diakses tanpa login
+    const publicPaths = ["/login", "/rekap"];
+
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
-      // Jika belum login dan bukan di halaman login, lempar ke /login
-      if (!session && pathname !== "/login") {
+      const isPublicPath = publicPaths.includes(pathname);
+
+      // Jika belum login dan BUKAN di halaman publik, lempar ke /login
+      if (!session && !isPublicPath) {
         router.push("/login");
       } 
       // Jika sudah login tapi akses /login, lempar ke home
@@ -26,9 +31,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
     checkSession();
 
-    // Dengarkan perubahan login/logout
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session && pathname !== "/login") {
+      const isPublicPath = publicPaths.includes(pathname);
+      if (!session && !isPublicPath) {
         router.push("/login");
       }
     });
