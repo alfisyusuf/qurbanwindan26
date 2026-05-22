@@ -1,7 +1,19 @@
+"use client"; // Wajib ditambahkan karena kita pakai hook useRouter dan event onClick
+
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { QrCode, Truck, Scale } from "lucide-react";
+import { QrCode, Truck, Scale, LogOut } from "lucide-react";
 
 export default function Home() {
+  const router = useRouter();
+
+  // Fungsi untuk memproses log out panitia
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
+
   return (
     <main className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 text-center border border-gray-100">
@@ -33,6 +45,15 @@ export default function Home() {
             </div>
           </Link>
         </div>
+
+        {/* Tombol Logout */}
+        <button 
+          onClick={handleLogout} 
+          className="mt-8 flex items-center justify-center gap-2 w-full text-gray-400 font-semibold hover:text-red-500 transition-colors"
+        >
+          <LogOut size={18} />
+          Keluar dari Akun
+        </button>
       </div>
     </main>
   );
