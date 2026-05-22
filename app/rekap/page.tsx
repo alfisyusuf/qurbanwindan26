@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { BarChart3, Beef, Ticket, Truck } from "lucide-react";
+import { BarChart3, Beef, Ticket, Truck, ChevronDown, ChevronUp } from "lucide-react";
+
+type HewanData = {
+  id: string;
+  jenis_hewan: string;
+  nomor_urut: number;
+  berat_daging_kg: number;
+};
 
 export default function RekapPage() {
   const [stats, setStats] = useState({
@@ -13,18 +20,28 @@ export default function RekapPage() {
     kurirTotal: 0,
     kurirSelesai: 0,
   });
+  
+  // State untuk menyimpan daftar rincian hewan
+  const [hewanList, setHewanList] = useState<HewanData[]>([]);
+  // State untuk membuka/menutup detail hewan
+  const [showDetailHewan, setShowDetailHewan] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Ambil data hewan
-        const { data: hewanData } = await supabase.from("hewan").select("*");
+        // Ambil data hewan, diurutkan berdasarkan jenis lalu nomor urut
+        const { data: hewanData } = await supabase
+          .from("hewan")
+          .select("*")
+          .order("jenis_hewan", { ascending: false })
+          .order("nomor_urut", { ascending: true });
         
         let dSapi = 0;
         let dKambing = 0;
 
         if (hewanData) {
+          setHewanList(hewanData);
           hewanData.forEach((h) => {
             if (h.jenis_hewan === "Sapi") dSapi += h.berat_daging_kg || 0;
             if (h.jenis_hewan === "Kambing") dKambing += h.berat_daging_kg || 0;
@@ -41,7 +58,6 @@ export default function RekapPage() {
 
         if (kuponData) {
           kuponData.forEach((k) => {
-            // Mencegah error jika kategori kosong/null di database
             const namaKategori = k.kategori || ""; 
 
             if (namaKategori.toLowerCase().includes("pengqurban")) {
@@ -66,14 +82,13 @@ export default function RekapPage() {
       } catch (error) {
         console.error("Gagal mengambil data:", error);
       } finally {
-        // Apapun yang terjadi (sukses/error), matikan loading
         setLoading(false); 
       }
     };
 
     fetchData();
 
-    // Auto-refresh setiap 10 detik agar realtime
+    // Auto-refresh setiap 10 detik
     const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
   }, []);
@@ -102,14 +117,23 @@ export default function RekapPage() {
           <p className="text-blue-200 font-medium text-sm">Dashboard Transparansi Qurban</p>
         </div>
 
-        {/* Card Timbangan */}
-        <div className="bg-white/80 backdrop-blur-xl border border-white p-6 rounded-3xl shadow-xl mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl"><Beef size={24} /></div>
-            <h2 className="font-black text-gray-800 text-lg">Total Daging Murni</h2>
+        {/* Card Timbangan - SEKARANG BISA DI-KLIK */}
+        <div className="bg-white/80 backdrop-blur-xl border border-white p-6 rounded-3xl shadow-xl mb-6 transition-all">
+          <div 
+            className="flex items-center justify-between mb-4 cursor-pointer"
+            onClick={() => setShowDetailHewan(!showDetailHewan)}
+          >
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl"><Beef size={24} /></div>
+              <h2 className="font-black text-gray-800 text-lg">Total Daging Murni</h2>
+            </div>
+            <div className="bg-gray-100 p-2 rounded-full text-gray-500 hover:bg-gray-200 transition-colors">
+              {showDetailHewan ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          {/* Ringkasan Total */}
+          <div className="grid grid-cols-2 gap-4 mb-2">
             <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 text-center">
               <p className="text-xs font-bold text-gray-400 uppercase mb-1">Sapi</p>
               <p className="text-3xl font-black text-emerald-600">{stats.dagingSapi.toFixed(1)} <span className="text-sm font-bold text-gray-500">Kg</span></p>
@@ -119,6 +143,29 @@ export default function RekapPage() {
               <p className="text-3xl font-black text-emerald-600">{stats.dagingKambing.toFixed(1)} <span className="text-sm font-bold text-gray-500">Kg</span></p>
             </div>
           </div>
+
+          {/* Rincian Detail Hewan (Muncul Saat Ditekan) */}
+          {showDetailHewan && (
+            <div className="mt-4 pt-4 border-t border-gray-200 animate-in fade-in slide-in-from-top-2 duration-300">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Rincian Per Ekor</h3>
+              <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                {hewanList.length === 0 ? (
+                  <p className="text-sm text-center text-gray-500 py-2">Belum ada data ditimbang.</p>
+                ) : (
+                  hewanList.map((hewan) => (
+                    <div key={hewan.id} className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                      <span className="font-bold text-gray-700">
+                        {hewan.jenis_hewan} Ke-{hewan.nomor_urut}
+                      </span>
+                      <span className="font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
+                        {hewan.berat_daging_kg} kg
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Card Kupon Warga */}
