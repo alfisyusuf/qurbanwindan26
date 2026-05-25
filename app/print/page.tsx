@@ -20,14 +20,28 @@ export default function PrintPage() {
 
   useEffect(() => {
     const fetchKupon = async () => {
-      // Mengambil semua data kupon, diurutkan berdasarkan kode_unik
+      // Mengambil semua data kupon dari database
       const { data, error } = await supabase
         .from("kupon")
-        .select("*")
-        .order("kode_unik", { ascending: true });
+        .select("*");
 
       if (!error && data) {
-        setKuponList(data);
+        // Logika Pengurutan Cerdas (Client-Side)
+        const sortedData = data.sort((a, b) => {
+          const isAEmpty = !a.nama_penerima || a.nama_penerima.trim() === "";
+          const isBEmpty = !b.nama_penerima || b.nama_penerima.trim() === "";
+
+          // Jika A kosong dan B ada namanya, lempar A ke bawah
+          if (isAEmpty && !isBEmpty) return 1;
+          // Jika A ada namanya dan B kosong, naikkan A ke atas
+          if (!isAEmpty && isBEmpty) return -1;
+          
+          // Jika statusnya sama (sama-sama kosong atau sama-sama ada nama),
+          // urutkan secara alfabetis berdasarkan kode uniknya.
+          return a.kode_unik.localeCompare(b.kode_unik);
+        });
+
+        setKuponList(sortedData);
       }
       setLoading(false);
     };
@@ -82,11 +96,13 @@ export default function PrintPage() {
                 <h3 className="font-bold text-gray-800 text-sm mb-1">{kupon.kategori}</h3>
                 
                 {/* Garis tulis nama untuk kupon kosongan */}
-                {kupon.nama_penerima ? (
+                {kupon.nama_penerima && kupon.nama_penerima.trim() !== "" ? (
                   <p className="text-xl font-black text-black mt-2">{kupon.nama_penerima}</p>
                 ) : (
-                  <div className="mt-4 border-b-2 border-gray-400 pb-1 w-full">
-                    <span className="text-gray-400 text-sm italic">Nama Penerima:</span>
+                  <div className="mt-2">
+                    <p className="text-gray-400 text-xl font-bold tracking-[0.15em] overflow-hidden whitespace-nowrap">
+                      .......................................
+                    </p>
                   </div>
                 )}
               </div>
