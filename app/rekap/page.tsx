@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { BarChart3, Beef, Ticket, Truck, ChevronDown, ChevronUp, CheckCircle2, Clock } from "lucide-react";
+import { BarChart3, Beef, Ticket, Truck, ChevronDown, ChevronUp, CheckCircle2, Clock, ShoppingBag } from "lucide-react";
 
 type HewanData = {
   id: string;
@@ -16,6 +16,7 @@ type KuponData = {
   kode_unik: string;
   nama_penerima: string | null;
   kategori: string;
+  jatah_plastik: number;
   status_claim: boolean;
   kurir_time: string | null;
 };
@@ -26,16 +27,16 @@ export default function RekapPage() {
     dagingKambing: 0,
     kuponTotal: 0,
     kuponDiambil: 0,
+    plastikTotal: 0, // Tambahan: Total Plastik
+    plastikKeluar: 0, // Tambahan: Plastik yang sudah diserahkan
     kurirTotal: 0,
     kurirSelesai: 0,
   });
   
-  // State Lists
   const [hewanList, setHewanList] = useState<HewanData[]>([]);
-  const [kuponWargaList, setKuponWargaList] = useState<KuponData[]>([]);
+  const [kuponSemuaList, setKuponSemuaList] = useState<KuponData[]>([]);
   const [kurirList, setKurirList] = useState<KuponData[]>([]);
 
-  // State Toggles (Accordion)
   const [showDetailHewan, setShowDetailHewan] = useState(false);
   const [showDetailKupon, setShowDetailKupon] = useState(false);
   const [showDetailKurir, setShowDetailKurir] = useState(false);
@@ -45,7 +46,7 @@ export default function RekapPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // 1. Ambil & Hitung Data Hewan
+        // 1. Data Hewan
         const { data: hewanData } = await supabase
           .from("hewan")
           .select("*")
@@ -63,37 +64,44 @@ export default function RekapPage() {
           });
         }
 
-        // 2. Ambil & Pisahkan Data Distribusi (Kupon Warga vs Kurir Pengqurban)
+        // 2. Data Distribusi
         const { data: kuponData } = await supabase.from("kupon").select("*");
         
         let kTotal = 0;
         let kDiambil = 0;
+        let pTotal = 0;
+        let pKeluar = 0;
         let kurTotal = 0;
         let kurSelesai = 0;
         
-        const tempKuponWarga: KuponData[] = [];
+        const tempKuponSemua: KuponData[] = [];
         const tempKurir: KuponData[] = [];
 
         if (kuponData) {
           kuponData.forEach((k) => {
-            const namaKategori = k.kategori || ""; 
+            // Hitung SEMUA KUPON & PLASTIK
+            kTotal++;
+            pTotal += (k.jatah_plastik || 1);
+            
+            if (k.status_claim) {
+              kDiambil++;
+              pKeluar += (k.jatah_plastik || 1);
+            }
+            tempKuponSemua.push(k);
 
+            // Hitung KHUSUS KURIR (Pengqurban)
+            const namaKategori = k.kategori || ""; 
             if (namaKategori.toLowerCase().includes("pengqurban")) {
               kurTotal++;
               if (k.kurir_time) kurSelesai++;
               tempKurir.push(k);
-            } else {
-              kTotal++;
-              if (k.status_claim) kDiambil++;
-              tempKuponWarga.push(k);
             }
           });
 
-          // Urutkan List: Yang BELUM (false/null) ditaruh paling ATAS
-          tempKuponWarga.sort((a, b) => (a.status_claim === b.status_claim ? 0 : a.status_claim ? 1 : -1));
+          tempKuponSemua.sort((a, b) => (a.status_claim === b.status_claim ? 0 : a.status_claim ? 1 : -1));
           tempKurir.sort((a, b) => ((a.kurir_time ? true : false) === (b.kurir_time ? true : false) ? 0 : a.kurir_time ? 1 : -1));
 
-          setKuponWargaList(tempKuponWarga);
+          setKuponSemuaList(tempKuponSemua);
           setKurirList(tempKurir);
         }
 
@@ -102,6 +110,8 @@ export default function RekapPage() {
           dagingKambing: dKambing,
           kuponTotal: kTotal,
           kuponDiambil: kDiambil,
+          plastikTotal: pTotal,
+          plastikKeluar: pKeluar,
           kurirTotal: kurTotal,
           kurirSelesai: kurSelesai,
         });
@@ -114,8 +124,7 @@ export default function RekapPage() {
     };
 
     fetchData();
-
-    const interval = setInterval(fetchData, 10000); // Auto refresh 10 detik
+    const interval = setInterval(fetchData, 10000); 
     return () => clearInterval(interval);
   }, []);
 
@@ -180,12 +189,12 @@ export default function RekapPage() {
           )}
         </div>
 
-        {/* 2. Card Kupon Warga */}
+        {/* 2. Card Penukaran Kupon Siang */}
         <div className="bg-white/80 backdrop-blur-xl border border-white p-6 rounded-3xl shadow-xl mb-6 transition-all">
-          <div className="flex items-center justify-between mb-4 cursor-pointer" onClick={() => setShowDetailKupon(!showDetailKupon)}>
+          <div className="flex items-center justify-between mb-2 cursor-pointer" onClick={() => setShowDetailKupon(!showDetailKupon)}>
             <div className="flex items-center gap-2">
               <div className="p-2 bg-blue-100 text-blue-600 rounded-xl"><Ticket size={24} /></div>
-              <h2 className="font-black text-gray-800 text-lg">Kupon Warga</h2>
+              <h2 className="font-black text-gray-800 text-lg">Kupon Siang Hari</h2>
             </div>
             <div className="flex items-center gap-3">
               <span className="font-black text-2xl text-blue-600">{persenKupon}%</span>
@@ -199,22 +208,42 @@ export default function RekapPage() {
             <div className="bg-blue-500 h-3 rounded-full transition-all duration-1000" style={{ width: `${persenKupon}%` }}></div>
           </div>
 
-          <div className="flex justify-between text-sm">
-            <div className="text-gray-500 font-semibold">Tersalurkan: <span className="text-black font-black">{stats.kuponDiambil}</span></div>
-            <div className="text-gray-500 font-semibold">Sisa (Belum): <span className="text-black font-black">{stats.kuponTotal - stats.kuponDiambil}</span></div>
+          {/* Indikator Baru: Pisahkan Fisik Kupon vs Fisik Plastik */}
+          <div className="grid grid-cols-2 gap-3 mb-2">
+            <div className="bg-blue-50/50 p-3 rounded-2xl border border-blue-100">
+              <p className="text-[10px] font-bold text-blue-500 uppercase mb-1">Sisa Kupon Warga</p>
+              <div className="flex items-end gap-1">
+                <span className="text-2xl font-black text-blue-700 leading-none">{stats.kuponTotal - stats.kuponDiambil}</span>
+                <span className="text-xs font-bold text-blue-400 mb-0.5">lembar</span>
+              </div>
+            </div>
+            <div className="bg-purple-50/50 p-3 rounded-2xl border border-purple-100">
+              <p className="text-[10px] font-bold text-purple-500 uppercase mb-1 flex items-center gap-1">
+                <ShoppingBag size={12} /> Sisa Kantong Daging
+              </p>
+              <div className="flex items-end gap-1">
+                <span className="text-2xl font-black text-purple-700 leading-none">{stats.plastikTotal - stats.plastikKeluar}</span>
+                <span className="text-xs font-bold text-purple-400 mb-0.5">plastik</span>
+              </div>
+            </div>
           </div>
 
           {showDetailKupon && (
             <div className="mt-4 pt-4 border-t border-gray-200 animate-in fade-in slide-in-from-top-2 duration-300">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Daftar Status Pengambilan</h3>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Daftar Pengambilan Kupon</h3>
               <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-1">
-                {kuponWargaList.map((kupon) => (
+                {kuponSemuaList.map((kupon) => (
                   <div key={kupon.id} className={`flex justify-between items-center p-3 rounded-xl border shadow-sm ${kupon.status_claim ? 'bg-gray-50 border-gray-100' : 'bg-white border-blue-100'}`}>
                     <div>
                       <p className={`font-bold text-sm ${kupon.status_claim ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
                         {kupon.nama_penerima || "KUPON KOSONGAN"}
                       </p>
-                      <p className="text-xs text-gray-400 font-mono mt-0.5">{kupon.kode_unik}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-gray-400 font-mono">{kupon.kode_unik}</span>
+                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${kupon.jatah_plastik > 1 ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
+                          {kupon.jatah_plastik} Plastik
+                        </span>
+                      </div>
                     </div>
                     <div>
                       {kupon.status_claim ? (
@@ -234,12 +263,12 @@ export default function RekapPage() {
           )}
         </div>
 
-        {/* 3. Card Antaran Kurir */}
+        {/* 3. Card Antaran Kurir Pagi */}
         <div className="bg-white/80 backdrop-blur-xl border border-white p-6 rounded-3xl shadow-xl transition-all">
           <div className="flex items-center justify-between mb-4 cursor-pointer" onClick={() => setShowDetailKurir(!showDetailKurir)}>
             <div className="flex items-center gap-2">
               <div className="p-2 bg-orange-100 text-orange-600 rounded-xl"><Truck size={24} /></div>
-              <h2 className="font-black text-gray-800 text-lg">Antaran Pengqurban</h2>
+              <h2 className="font-black text-gray-800 text-lg">Kurir Pagi (Pengqurban)</h2>
             </div>
             <div className="flex items-center gap-3">
               <span className="font-black text-2xl text-orange-600">{persenKurir}%</span>
