@@ -101,7 +101,7 @@ export default function PrintPage() {
                 ) : (
                   <div className="mt-2">
                     <p className="text-gray-400 text-xl font-bold tracking-[0.15em] overflow-hidden whitespace-nowrap">
-                      .......................................
+                      ..........
                     </p>
                   </div>
                 )}
